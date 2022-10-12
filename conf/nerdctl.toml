@@ -1,0 +1,4 @@
+debug          = false
+debug_full     = false
+address        = "unix:///run/containerd/containerd.sock"
+namespace      = "k8s.io"

@@ -29,3 +29,4 @@ override.tf.json
 # example: *tfplan*
 
 ssh_private_key
+redist.tgz

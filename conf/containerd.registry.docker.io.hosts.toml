@@ -1,0 +1,4 @@
+server = "https://docker.io"
+
+#[host."https://wy7vr8gh.mirror.aliyuncs.com"]
+#  capabilities = ["pull", "resolve"]
