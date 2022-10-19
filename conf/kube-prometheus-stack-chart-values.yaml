@@ -1306,8 +1306,8 @@ kubeEtcd:
   ##
   service:
     enabled: true
-    port: 2381
-    targetPort: 2381
+    port: 2379
+    targetPort: 2379
     # selector:
     #   component: etcd
 
@@ -1330,12 +1330,12 @@ kubeEtcd:
     ## proxyUrl: URL of a proxy that should be used for scraping.
     ##
     proxyUrl: ""
-    scheme: http
+    scheme: https
     insecureSkipVerify: false
-    serverName: ""
-    caFile: ""
-    certFile: ""
-    keyFile: ""
+    serverName: "master0"
+    caFile: "/etc/prometheus/configmaps/kube-etcd-ca.crt/ca.crt"
+    certFile: "/etc/prometheus/secrets/kube-etcd-healthcheck-client-tls-secret/tls.crt"
+    keyFile: "/etc/prometheus/secrets/kube-etcd-healthcheck-client-tls-secret/tls.key"
 
     ## MetricRelabelConfigs to apply to samples after scraping, but before ingestion.
     ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#relabelconfig
@@ -2457,12 +2457,14 @@ prometheus:
     ## reflected in the running Pods. To change the secrets mounted into the Prometheus Pods, the object must be deleted and recreated
     ## with the new list of secrets.
     ##
-    secrets: []
+    secrets:
+      - kube-etcd-healthcheck-client-tls-secret
 
     ## ConfigMaps is a list of ConfigMaps in the same namespace as the Prometheus object, which shall be mounted into the Prometheus Pods.
     ## The ConfigMaps are mounted into /etc/prometheus/configmaps/.
     ##
-    configMaps: []
+    configMaps:
+      - kube-etcd-ca.crt
 
     ## QuerySpec defines the query command line flags when starting Prometheus.
     ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#queryspec
