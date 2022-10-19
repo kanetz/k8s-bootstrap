@@ -13,3 +13,5 @@ EOF
 
 resolvectl domain eth0 vpc
 systemctl restart systemd-resolved
+
+apt remove -y --purge unattended-upgrades

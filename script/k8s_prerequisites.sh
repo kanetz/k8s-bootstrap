@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
 
 
 NODE_NAME="$(hostname)"
@@ -23,8 +24,8 @@ cat <<-EOF >/etc/sysctl.d/k8s.conf
 	net.bridge.bridge-nf-call-iptables  = 1
 	net.bridge.bridge-nf-call-ip6tables = 1
 	net.ipv4.ip_forward                 = 1
-	net.ipv4.conf.all.forwarding		= 1
-	net.ipv6.conf.all.forwarding		= 1
+	net.ipv4.conf.all.forwarding        = 1
+	net.ipv6.conf.all.forwarding        = 1
 	net.netfilter.nf_conntrack_max      = 1000000
 EOF
 sysctl --system
@@ -70,11 +71,10 @@ cp -f conf/crictl.yaml /etc/crictl.yaml
 tar Cxf /usr/bin redist/nerdctl-0.23.0-linux-amd64.tar.gz
 mkdir -p /etc/nerdctl
 cp -f conf/nerdctl.toml /etc/nerdctl/nerdctl.toml
-nerdctl -n k8s.io load -i redist/metrics-server-linux-amd64-v0.6.1.tar
-nerdctl -n k8s.io load -i redist/ingress-nginx-controller-linux-amd64-v1.4.0.tar
-nerdctl -n k8s.io load -i redist/kube-webhook-certgen-linux-amd64-v20220916-gd32f8c343.tar
-nerdctl -n k8s.io load -i redist/tektoncd-pipeline-cmd-controller-linux-amd64-v0.40.2.tar
-nerdctl -n k8s.io load -i redist/tektoncd-pipeline-cmd-webhook-linux-amd64-v0.40.2.tar
+
+echo "Preloading images into k8s.io namespace..."
+find redist/images -name '*.tar' -type f \
+	-exec nerdctl -n k8s.io load -i {} \;
 
 
 apt-get install -y kubelet kubeadm kubectl
@@ -85,7 +85,6 @@ crictl completion bash >/etc/bash_completion.d/crictl
 nerdctl completion bash >/etc/bash_completion.d/nerdctl
 kubeadm completion bash >/etc/bash_completion.d/kubeadm
 kubectl completion bash >/etc/bash_completion.d/kubectl
-
 echo 'alias k=kubectl' >>~/.bashrc
 echo 'complete -o default -F __start_kubectl k' >>~/.bashrc
 

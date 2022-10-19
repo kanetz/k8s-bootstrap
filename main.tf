@@ -8,7 +8,7 @@ terraform {
 }
 
 locals {
-  availability_zone = data.alicloud_instance_types.master_instance_types.instance_types.0.availability_zones.0
+  availability_zone = data.alicloud_instance_types.deployer_instance_types.instance_types.0.availability_zones.0
   image_id          = data.alicloud_images.ubuntu.ids.0
 
   script_dir           = "${path.root}/script"
@@ -31,12 +31,14 @@ data "alicloud_instance_types" "deployer_instance_types" {
   memory_size    = 1
 }
 data "alicloud_instance_types" "master_instance_types" {
-  cpu_core_count = var.master_cpu_core_count
-  memory_size    = var.master_memory_size_gb
+  cpu_core_count    = var.master_cpu_core_count
+  memory_size       = var.master_memory_size_gb
+  availability_zone = local.availability_zone
 }
 data "alicloud_instance_types" "worker_instance_types" {
-  cpu_core_count = var.worker_cpu_core_count
-  memory_size    = var.worker_memory_size_gb
+  cpu_core_count    = var.worker_cpu_core_count
+  memory_size       = var.worker_memory_size_gb
+  availability_zone = local.availability_zone
 }
 
 data "alicloud_images" "ubuntu" {
@@ -205,11 +207,11 @@ resource "alicloud_instance" "masters" {
   security_enhancement_strategy = "Deactive"
 
   connection {
-    type                = "ssh"
-    bastion_host        = local.deployer_public_ip
-    host                = self.private_ip
-    user                = "root"
-    private_key         = local.private_key_pem
+    type         = "ssh"
+    bastion_host = local.deployer_public_ip
+    host         = self.private_ip
+    user         = "root"
+    private_key  = local.private_key_pem
   }
 
   provisioner "file" {
@@ -252,11 +254,11 @@ resource "alicloud_instance" "workers" {
   security_enhancement_strategy = "Deactive"
 
   connection {
-    type                = "ssh"
-    bastion_host        = local.deployer_public_ip
-    host                = self.private_ip
-    user                = "root"
-    private_key         = local.private_key_pem
+    type         = "ssh"
+    bastion_host = local.deployer_public_ip
+    host         = self.private_ip
+    user         = "root"
+    private_key  = local.private_key_pem
   }
 
   provisioner "file" {
@@ -287,10 +289,10 @@ resource "alicloud_pvtz_zone_attachment" "zone_attachment" {
 resource "alicloud_pvtz_zone_record" "vpc_instances" {
   count = length(local.all_instances)
 
-  zone_id         = alicloud_pvtz_zone.vpc_pvtz_zone.id
-  type            = "A"
-  rr              = local.all_instances[count.index].host_name
-  value           = local.all_instances[count.index].private_ip
+  zone_id = alicloud_pvtz_zone.vpc_pvtz_zone.id
+  type    = "A"
+  rr      = local.all_instances[count.index].host_name
+  value   = local.all_instances[count.index].private_ip
 }
 
 
@@ -327,11 +329,11 @@ resource "null_resource" "k8s_prerequisites" {
   count = length(local.all_nodes)
 
   connection {
-    type                = "ssh"
-    bastion_host        = local.deployer_public_ip
-    host                = local.all_nodes[count.index].private_ip
-    user                = "root"
-    private_key         = local.private_key_pem
+    type         = "ssh"
+    bastion_host = local.deployer_public_ip
+    host         = local.all_nodes[count.index].private_ip
+    user         = "root"
+    private_key  = local.private_key_pem
   }
 
   provisioner "remote-exec" {
@@ -349,11 +351,11 @@ resource "null_resource" "k8s_control_plane" {
   count = length(alicloud_instance.masters)
 
   connection {
-    type                = "ssh"
-    bastion_host        = local.deployer_public_ip
-    host                = alicloud_instance.masters[count.index].private_ip
-    user                = "root"
-    private_key         = local.private_key_pem
+    type         = "ssh"
+    bastion_host = local.deployer_public_ip
+    host         = alicloud_instance.masters[count.index].private_ip
+    user         = "root"
+    private_key  = local.private_key_pem
   }
 
   provisioner "remote-exec" {
@@ -371,11 +373,11 @@ resource "null_resource" "k8s_worker_nodes" {
   count = length(alicloud_instance.workers)
 
   connection {
-    type                = "ssh"
-    bastion_host        = local.deployer_public_ip
-    host                = alicloud_instance.workers[count.index].private_ip
-    user                = "root"
-    private_key         = local.private_key_pem
+    type         = "ssh"
+    bastion_host = local.deployer_public_ip
+    host         = alicloud_instance.workers[count.index].private_ip
+    user         = "root"
+    private_key  = local.private_key_pem
   }
 
   provisioner "remote-exec" {
@@ -385,25 +387,23 @@ resource "null_resource" "k8s_worker_nodes" {
   }
 }
 
-resource "null_resource" "post_install_config" {
+resource "null_resource" "post_install" {
   depends_on = [
     null_resource.k8s_control_plane,
     null_resource.k8s_worker_nodes,
   ]
 
   connection {
-    type                = "ssh"
-    bastion_host        = local.deployer_public_ip
-    host                = alicloud_instance.masters[0].private_ip
-    user                = "root"
-    private_key         = local.private_key_pem
+    type        = "ssh"
+    host        = local.deployer_public_ip
+    user        = "root"
+    private_key = local.private_key_pem
   }
 
   provisioner "remote-exec" {
     scripts = [
       "${local.script_dir}/k8s_post_install_config.sh",
       "${local.script_dir}/k8s_nginx_hello.sh",
-      # "${local.script_dir}/tekton.sh",
     ]
   }
 }
@@ -413,6 +413,6 @@ output "_01_ssh" {
   value = "ssh -i ${abspath(local.private_key_file)} root@${local.deployer_public_ip}"
 }
 
-output "_02_hello" {
+output "_02_grafana" {
   value = "http://${local.deployer_public_ip}/"
 }

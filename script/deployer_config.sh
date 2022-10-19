@@ -7,20 +7,29 @@ echo -e "\n\e[0;96mConfiguring [deployer]...\e[0m\n"
 cd $HOME
 
 
-echo "Fetching redist materials..."
+echo "Fetching and unpacking redist materials..."
 curl -fsSL http://k8s-bootstrap.oss-cn-shenzhen-internal.aliyuncs.com/redist.tgz -o redist.tgz
 tar xzvf redist.tgz
 
 
+echo "Configuring kubectl..."
 cp -f redist/kubernetes-archive-keyring.gpg /usr/share/keyrings/kubernetes.gpg
 echo "deb [signed-by=/usr/share/keyrings/kubernetes.gpg] http://mirrors.cloud.aliyuncs.com/kubernetes/apt/ kubernetes-xenial main" >/etc/apt/sources.list.d/kubernetes.list
 apt-get update -y
-apt-get install -y \
-	haproxy \
-	kubectl
+DEBIAN_FRONTEND=noninteractive apt-get install -y kubectl jq unzip
+kubectl completion bash >/etc/bash_completion.d/kubectl
+echo 'alias k=kubectl' >>~/.bashrc
+echo 'complete -o default -F __start_kubectl k' >>~/.bashrc
+
+
+echo "Configuring helm3..."
+tar Cxzf /usr/local/bin redist/helm-v3.10.0-linux-amd64.tar.gz linux-amd64/helm --strip-components=1
+helm completion bash >/etc/bash_completion.d/helm
 
 
 echo "Configuring haproxy..."
+apt-get update -y
+DEBIAN_FRONTEND=noninteractive apt-get install -y haproxy
 cp -f /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg.bak
 cat <<EOF >/etc/haproxy/haproxy.cfg
 global
