@@ -4,7 +4,7 @@ set -euo pipefail
 
 
 NODE_NAME="$(hostname)"
-echo -e "\n\e[0;96mBootstrapping k8s worker node on [${NODE_NAME}]...\e[0m\n"
+echo -e "\n\e[0;96mJoining as k8s worker node on [${NODE_NAME}]...\e[0m\n"
 cd $HOME
 
 mkdir -p ~/.kube

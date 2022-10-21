@@ -7,9 +7,13 @@ NODE_NAME="$(hostname)"
 echo -e "\n\e[0;96mBootstrapping k8s control plane on [${NODE_NAME}]...\e[0m\n"
 cd $HOME
 
-kubeadm init --config conf/kubeadm.config.yaml
+kubeadm init --config conf/kubeadm.config.yaml --upload-certs
 mkdir -p $HOME/.kube
 cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
+
+echo 'Setting IO prirority for etcd...'
+ionice -c2 -n0 -p $(pgrep etcd)
+ionice -p $(pgrep etcd)
 
 kubectl create -f conf/calico-3.24.1-tigera-operator.yaml
 echo 'Waiting for the Calico CRDs to be ready...'

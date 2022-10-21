@@ -54,6 +54,7 @@ helm upgrade --install promtail ./redist/charts/promtail-6.5.0.tgz \
 echo 'Waiting for the Promtail components to be ready...'
 until kubectl -n loki get po -l app.kubernetes.io/name=promtail -o jsonpath='{.items[0].metadata.name}' &>/dev/null; do sleep 1; done
 kubectl -n loki wait po -l app.kubernetes.io/name=promtail --for 'condition=Ready' --timeout=10m
+kubectl label --overwrite -n loki svc loki-headless prometheus.io/service-monitor=false
 
 
 echo -e "\n\e[0;96mConfiguring namespace monitoring...\e[0m\n"

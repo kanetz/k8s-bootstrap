@@ -7,7 +7,26 @@ terraform {
   }
 }
 
+
+resource "time_static" "start_time" {}
+resource "time_static" "end_time" {
+  triggers = {
+    completed = null_resource.post_install.id
+  }
+}
+
+
 locals {
+  elapsed_time_unix    = time_static.end_time.unix - time_static.start_time.unix
+  elapsed_time_hours   = floor(local.elapsed_time_unix / 3600)
+  elapsed_time_minutes = floor(local.elapsed_time_unix % 3600 / 60)
+  elapsed_time_seconds = local.elapsed_time_unix % 60
+  elapsed_time_text    = format("%s%s%s",
+    local.elapsed_time_hours > 0 ? "${local.elapsed_time_hours}h" : "",
+    (local.elapsed_time_hours > 0 || local.elapsed_time_minutes > 0) ? "${local.elapsed_time_minutes}m" : "",
+    "${local.elapsed_time_seconds}s"
+  )
+
   availability_zone = data.alicloud_instance_types.deployer_instance_types.instance_types.0.availability_zones.0
   image_id          = data.alicloud_images.ubuntu.ids.0
 
@@ -25,6 +44,11 @@ locals {
   all_nodes     = concat(alicloud_instance.masters, alicloud_instance.workers)
   all_instances = concat(local.all_nodes, [alicloud_instance.deployer])
 }
+
+
+################
+# Provisioning #
+################
 
 data "alicloud_instance_types" "deployer_instance_types" {
   cpu_core_count = 1
@@ -296,6 +320,10 @@ resource "alicloud_pvtz_zone_record" "vpc_instances" {
 }
 
 
+##############
+# Deployment #
+##############
+
 resource "null_resource" "deployer_config" {
   depends_on = [
     alicloud_snat_entry.snat_entry,
@@ -408,6 +436,14 @@ resource "null_resource" "post_install" {
   }
 }
 
+
+##########
+# Output #
+##########
+
+output "_00_elapsed_time" {
+  value = local.elapsed_time_text
+}
 
 output "_01_ssh" {
   value = "ssh -i ${abspath(local.private_key_file)} root@${local.deployer_public_ip}"
